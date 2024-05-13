@@ -7,7 +7,6 @@ class CIFAR_Model(nn.Module):
 
     def __init__(self, n_classes):
         super(CIFAR_Model, self).__init__()
-
         self.classifier = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3),
             nn.ReLU(),
