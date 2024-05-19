@@ -1,0 +1,11 @@
+MLP_MNIST
+Test set: Average loss: 0.0863, Accuracy: 9755/10000 (98%)
+
+MNIST_CIFAR10
+Test set: Average loss: 1.4798, Accuracy: 5229/10000 (52%)
+
+LENET_CIFAR10
+Test set: Average loss: 1.0817, Accuracy: 6250/10000 (62%)
+
+LENET_MNIST
+Test set: Average loss: 0.0435, Accuracy: 9861/10000 (99%)

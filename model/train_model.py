@@ -64,10 +64,10 @@ def main(args):
     else:
         # elif args.model == "LENET":
         if args.dataset == "CIFAR10":
-            model = LeNet(input_channels=1, output_dim=10).to(device)
+            model = LeNet_CIFAR10(input_channels=3, output_dim=10).to(device)
         else:
             # args.dataset == "MNIST"
-            model = LeNet(input_channels=3, output_dim=10).to(device)
+            model = LeNet_MNIST(input_channels=1, output_dim=10).to(device)
 
     if args.dataset == "CIFAR10":
         # Load CIFAR-10 dataset
@@ -93,12 +93,6 @@ def main(args):
         for epoch in range(1, epochs + 1):
             train(model, device, cifar10_train_loader, optimizer, epoch)
             test(model, device, cifar10_test_loader)
-        
-        save_path = os.path.join(args.save_path, f"{args.model}_{args.dataset}.pt")
-        torch.save(model.state_dict(), save_path)
-
-        
-
     elif args.dagaset == "MNIST":
         # Load MNIST dataset, loaders
         mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -114,8 +108,9 @@ def main(args):
             train(model, device, mnist_train_loader, optimizer, epoch)
             test(model, device, mnist_test_loader)
 
-        save_path = os.path.join(args.save_path, f"{args.model}_{args.dataset}.pt")
-        torch.save(model.state_dict(), save_path)
+    save_path = os.path.join(args.save_path, f"{args.model}_{args.dataset}.pt")
+    torch.save(model.state_dict(), save_path)
+
 
 
 

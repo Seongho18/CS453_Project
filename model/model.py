@@ -29,7 +29,7 @@ class MLP(nn.Module):
 
         return y_pred, h_2
 
-class LeNet(nn.Module):
+class LeNet_MNIST(nn.Module):
     def __init__(self, input_channels=1, output_dim=10):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=6, kernel_size=5)
@@ -47,4 +47,37 @@ class LeNet(nn.Module):
         x = F.relu(self.fc_2(x))
         x = self.fc_3(x)
         
+        return x, h
+    
+class LeNet_CIFAR10(nn.Module):
+    def __init__(self, input_channels=3, output_dim=10):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels=input_channels, out_channels=6, kernel_size=5)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5)
+        
+        # To calculate the input size of the first fully connected layer
+        self._to_linear = None
+        self.convs = nn.Sequential(
+            self.conv1,
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            self.conv2,
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)
+        )
+        
+        x = torch.randn(input_channels, 32, 32).unsqueeze(0)
+        self._to_linear = self.convs(x).view(-1).shape[0]
+
+        self.fc_1 = nn.Linear(self._to_linear, 120)
+        self.fc_2 = nn.Linear(120, 84)
+        self.fc_3 = nn.Linear(84, output_dim)
+
+    def forward(self, x):
+        x = self.convs(x)
+        x = x.view(x.shape[0], -1)
+        h = x
+        x = F.relu(self.fc_1(x))
+        x = F.relu(self.fc_2(x))
+        x = self.fc_3(x)
         return x, h
