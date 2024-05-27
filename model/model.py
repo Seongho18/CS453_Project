@@ -12,6 +12,7 @@ class MLP(nn.Module):
         self.input_fc = nn.Linear(input_dim, 250)
         self.hidden_fc = nn.Linear(250, 100)
         self.output_fc = nn.Linear(100, output_dim)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         # x = [batch size, height, width]
@@ -28,6 +29,20 @@ class MLP(nn.Module):
         # y_pred = [batch size, output dim]
 
         return y_pred, h_2
+
+    def get_coverage(self, x, threshold):
+        batch_size = x.shape[0]
+        x = x.view(batch_size, -1)
+        
+        h_1 = F.relu(self.input_fc(x))
+        activated_1 = torch.flatten(self.sigmoid(10*(h_1 - threshold)))
+
+        h_2 = F.relu(self.hidden_fc(h_1))
+        activated_2 = torch.flatten(self.sigmoid(10*(h_2 - threshold)))
+
+        activated = torch.cat([activated_1, activated_2])
+        coverage = torch.mean(activated)
+        return coverage
 
 class LeNet_MNIST(nn.Module):
     def __init__(self, input_channels=1, output_dim=10):
@@ -49,6 +64,26 @@ class LeNet_MNIST(nn.Module):
         
         return x, h
     
+    def get_coverage(self, x, threshold):
+        num_activated = 0
+        num_neuron = 0
+
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        activated_1 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        activated_2 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        x = x.view(x.shape[0], -1)
+        h = x
+        x = F.relu(self.fc_1(x))
+        activated_3 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        x = F.relu(self.fc_2(x))
+        activated_4 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        x = self.fc_3(x)
+
+        activated = torch.cat([activated_1, activated_2, activated_3, activated_4])
+        coverage = torch.mean(activated)
+        return coverage
+
 class LeNet_CIFAR10(nn.Module):
     def __init__(self, input_channels=3, output_dim=10):
         super().__init__()
