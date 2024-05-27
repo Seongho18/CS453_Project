@@ -19,14 +19,14 @@ class MLP(nn.Module):
         batch_size = x.shape[0]
         x = x.view(batch_size, -1)
         
-        h_1 = F.relu(self.input_fc(x))
         # h_1 = [batch size, 250]
+        h_1 = F.relu(self.input_fc(x))
 
-        h_2 = F.relu(self.hidden_fc(h_1))
         # h_2 = [batch size, 100]
+        h_2 = F.relu(self.hidden_fc(h_1))
 
-        y_pred = self.output_fc(h_2)
         # y_pred = [batch size, output dim]
+        y_pred = self.output_fc(h_2)
 
         return y_pred, h_2
 
@@ -35,13 +35,15 @@ class MLP(nn.Module):
         x = x.view(batch_size, -1)
         
         h_1 = F.relu(self.input_fc(x))
-        activated_1 = torch.flatten(self.sigmoid(10*(h_1 - threshold)))
+        activated_1 = self.sigmoid(10*(h_1 - threshold))
 
         h_2 = F.relu(self.hidden_fc(h_1))
-        activated_2 = torch.flatten(self.sigmoid(10*(h_2 - threshold)))
+        activated_2 = self.sigmoid(10*(h_2 - threshold))
 
-        activated = torch.cat([activated_1, activated_2])
-        coverage = torch.mean(activated)
+        # [batch size, 350]
+        activated = torch.cat([activated_1, activated_2], 1)
+        # [batch size]
+        coverage = torch.mean(activated, 1)
         return coverage
 
 class LeNet_MNIST(nn.Module):
@@ -69,19 +71,19 @@ class LeNet_MNIST(nn.Module):
         num_neuron = 0
 
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        activated_1 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        activated_1 = self.sigmoid(10*(x - threshold))
         x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        activated_2 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        activated_2 = self.sigmoid(10*(x - threshold))
         x = x.view(x.shape[0], -1)
         h = x
         x = F.relu(self.fc_1(x))
-        activated_3 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        activated_3 = self.sigmoid(10*(x - threshold))
         x = F.relu(self.fc_2(x))
-        activated_4 = torch.flatten(self.sigmoid(10*(x - threshold)))
+        activated_4 = self.sigmoid(10*(x - threshold))
         x = self.fc_3(x)
 
-        activated = torch.cat([activated_1, activated_2, activated_3, activated_4])
-        coverage = torch.mean(activated)
+        activated = torch.cat([activated_1, activated_2, activated_3, activated_4], 1)
+        coverage = torch.mean(activated, 1)
         return coverage
 
 class LeNet_CIFAR10(nn.Module):
