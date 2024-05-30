@@ -28,6 +28,20 @@ def w2x_mnist(w):
     x = torch.atanh(w)
     return x
 
+
+def calculate_accuracy(model, data_loader, device):
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for images, labels in data_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs, _ = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    return correct / total
+
 def main(args):
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -53,88 +67,114 @@ def main(args):
     model.load_state_dict(torch.load(args.model_path))
     model.eval()
 
+    pretrained_model = make_model(args.model, args.dataset).to(device)
+    pretrained_model.load_state_dict(torch.load(args.model_path))
+    pretrained_model.eval()
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(pretrained_model.parameters(), lr=args.learning_rate)
+
+
     all_coverage_before = []
     all_coverage_after = []
 
-    for batch_idx, (data, label) in enumerate(train_loader):
-        # data = data.to(device)
-        # print("##")
-        # print(data.size)
-        # tensor2png(data[1])
-        # print(model.get_coverage(data, 1))
-        # exit()
+    for epoch in range(args.epochs_noise):
+        for batch_idx, (data, label) in enumerate(train_loader):
+            # data = data.to(device)
+            # tensor2png(data[1])
+            # print(model.get_coverage(data, 1))
+            # exit()
 
-        # load data
-        data = data.to(device)
-        label = label.to(device)
+            # load data
+            data = data.to(device)
+            label = label.to(device)
 
-        # initialzie noise vector
-        noise = torch.randn((data[0].size()[0], 1, img_height, img_width), requires_grad=True, device=device)
-        optimizer_noise = optim.Adam([noise], lr=1e-2)
+            # initialzie noise vector
+            noise = torch.randn((data.size()[0], 1, img_height, img_width), requires_grad=True, device=device)
+            optimizer_noise = optim.Adam([noise], lr=1e-2)
 
-        # save original images
-        original_data_path = os.path.join(args.original_data_dir, f'original_data_batch_{batch_idx}_image.jpg')
-        for i in range(data.size(0)):
-            img = data[i].cpu().detach().numpy().transpose((1, 2, 0))
-            img_path = original_data_path.replace(".jpg", f"_{i}.jpg")
-            cv2.imwrite(img_path, cv2.cvtColor((img + 1) * 127.5, cv2.COLOR_RGB2BGR))
-        
-        # Compute coverage (original images)
-        coverage_before = model.get_coverage(data, 1)
-        all_coverage_before.append(coverage_before)
-        
-
-        # Optimize noise iteratively
-        for _ in range(args.step_num):
-            # init optimizer
-            optimizer_noise.zero_grad()
+            # save original images
+            if batch_idx == 0:
+                original_data_path = os.path.join(args.original_data_dir, f'original_data_batch_{batch_idx}_image.jpg')
+                img = data[0].cpu().detach().numpy().transpose((1, 2, 0))
+                img_path = original_data_path.replace(".jpg", f".jpg")
+                cv2.imwrite(img_path, cv2.cvtColor((img + 1) * 127.5, cv2.COLOR_RGB2BGR))
             
-            # perturbed image
-            perturbed_data = data + noise
+            # Compute coverage (original images)
+            coverage_before = model.get_coverage(data, 1)
+            all_coverage_before.append(coverage_before)
+            
+            # Optimize noise iteratively
+            for _ in range(args.step_num):
+                # init optimizer
+                optimizer_noise.zero_grad()
+                
+                # perturbed image
+                perturbed_data = data + noise
 
-            # apply constraints
-            perturbed_data = torch.clamp(perturbed_data, -1, 1)
+                # apply constraints
+                perturbed_data = torch.clamp(perturbed_data, -1, 1)
 
-            # compute coverage (perturbed images)
-            coverage = model.get_coverage(perturbed_data, 1)
+                # compute coverage (perturbed images)
+                coverage = model.get_coverage(perturbed_data, 1)
 
-            # our loss function
-            loss_noise = torch.norm(noise) * args.lagrangian - coverage.mean()
+                # our loss function
+                loss_noise = torch.norm(noise) * args.lagrangian - coverage.mean()
 
-            # optimize
-            loss_noise.backward()
-            optimizer_noise.step()
+                # optimize
+                loss_noise.backward()
+                optimizer_noise.step()
 
-        # save perturbed images
-        perturbed_data_path = os.path.join(args.perturbed_data_dir, f'perturbed_data_batch_{batch_idx}_image.jpg')
-        for i in range(perturbed_data.size(0)):
-            img = perturbed_data[i].cpu().detach().numpy().transpose((1, 2, 0))
-            img_path = perturbed_data_path.replace(".jpg", f"_{i}.jpg")
-            cv2.imwrite(img_path, cv2.cvtColor((img + 1) * 127.5, cv2.COLOR_RGB2BGR))
+            # save perturbed images
+            if batch_idx == 0:
+                perturbed_data_path = os.path.join(args.perturbed_data_dir, f'perturbed_data_batch_{batch_idx}_image.jpg')
+                img = perturbed_data[0].cpu().detach().numpy().transpose((1, 2, 0))
+                img_path = perturbed_data_path.replace(".jpg", f".jpg")
+                cv2.imwrite(img_path, cv2.cvtColor((img + 1) * 127.5, cv2.COLOR_RGB2BGR))
 
-        coverage_after = model.get_coverage(perturbed_data, 1)
-        all_coverage_after.append(coverage_after)
+            coverage_after = model.get_coverage(perturbed_data, 1)
+            all_coverage_after.append(coverage_after)
 
-    all_coverage_before_final = torch.cat(all_coverage_before)
-    all_coverage_after_final = torch.cat(all_coverage_after)
-    print("Coverage Before attack: {:.2f}%".format(all_coverage_before_final.mean() * 100))
-    print("Coverage After attack: {:.2f}%".format(all_coverage_after_final.mean() * 100))
+            optimizer.zero_grad()
+            outputs, _ = pretrained_model(perturbed_data.detach())
+            loss = criterion(outputs, label)
+            loss.backward()
+            optimizer.step()
+
+        accuracy = calculate_accuracy(pretrained_model, test_loader, device)
+        print(f'Epoch [{epoch+1}/{args.epochs_noise}], Loss: {loss.item():.4f}, Accuracy: {accuracy:.4f}')
+
+        if args.epochs_noise == 0:
+            all_coverage_before_final = torch.cat(all_coverage_before)
+            all_coverage_after_final = torch.cat(all_coverage_after)
+            print("Coverage Before attack: {:.2f}%".format(all_coverage_before_final.mean() * 100))
+            print("Coverage After attack: {:.2f}%".format(all_coverage_after_final.mean() * 100))
+
+    # save model
+    save_path = os.path.join(args.save_path, f"{args.model}_{args.dataset}_with_noise_{args.epochs_noise}epoch.pt")
+    torch.save(model.state_dict(), save_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dataset", choices=["MNIST", "CIFAR10"], default="MNIST")
-    parser.add_argument("-m", "--model", choices=["MLP", "CIFAR10"], default="MLP")
+    parser.add_argument("-m", "--model", choices=["MLP", "LENET"], default="MLP")
     parser.add_argument(
         "--model-path",
         required=True,
         help="save path of model weight",
+    )
+    parser.add_argument(
+        "--save-path",
+        required=True,
+        help="save path of model weight",
+        default="./weights/"
     )
     # args for noise
     parser.add_argument("-s", "--step-num", default=100, type=int)
     parser.add_argument("-l", "--lagrangian", default=0.01, type=float)
     parser.add_argument("--original-data-dir", default="original_train_data")
     parser.add_argument("--perturbed-data-dir", default="perturbed_train_data")
-    parser.add_argument("-r", "--retraining-epoch", default=10, type=int)
+    parser.add_argument("-e", "--epochs-noise", type=int, default=10)
+    parser.add_argument("-lr", "--learning-rate", type=float, default=0.001)
 
     args = parser.parse_args()
 
