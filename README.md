@@ -29,6 +29,14 @@ The 'lagrangian' balances two factors: 1) the size of perturbation, and 2) maxim
 we save two types of images "original images" and "perturbed images"
 
 We can retrain models using perturbed images. (WIP)
+
+For example, you can run
 ```
 python add_noise.py --model-path weights/MLP_MNIST.pt --lagrangian 0.01 --step-num 100
+```
+
+Then, you can get both the original and updated neuron coverage as follows.
+```
+Coverage Before attack: 19.37%
+Coverage After attack: 23.00%
 ```
