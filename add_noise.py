@@ -55,6 +55,9 @@ def main(args):
     noise = torch.randn((batch_size, 1, 28, 28), requires_grad=True, device=device)
     optimizer_noise = optim.Adam([noise], lr=1e-2)
 
+    all_coverage_before = []
+    all_coverage_after = []
+
     for data, _ in train_loader:
         # data = data.to(device)
         # print("##")
@@ -63,11 +66,14 @@ def main(args):
         # print(model.get_coverage(data, 1))
         # exit()
 
+        data = data.to(device)
+        tensor2png(data[1])
+        coverage_before = model.get_coverage(data, 1)
+        all_coverage_before.append(coverage_before)
+        all_coverage_before = torch.cat(all_coverage_before)
+
         # Optimize noise iteratively
         for _ in range(args.step_num):
-            # load data
-            data = data.to(device)
-
             # init optimizer
             optimizer_noise.zero_grad()
             
@@ -87,9 +93,15 @@ def main(args):
             loss_noise.backward()
             optimizer_noise.step()
 
+        # tensor2png(perturbed_data[1])
         tensor2png(perturbed_data[1])
-        print(model.get_coverage(perturbed_data, 1))
-        exit()
+        coverage_after = model.get_coverage(perturbed_data, 1)
+        all_coverage_after.append(coverage_after)
+        all_coverage_after = torch.cat(all_coverage_after)
+        break
+        
+    print("Coverage Before attack: {:.2f}%".format(all_coverage_before.mean() * 100))
+    print("Coverage After attack: {:.2f}%".format(all_coverage_after.mean() * 100))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -102,7 +114,7 @@ if __name__ == "__main__":
     )
     # args for noise
     parser.add_argument("-t", "--step-num", default=100, type=int)
-    parser.add_argument("-l", "--lagrangian", default=0.1, type=float)
+    parser.add_argument("-l", "--lagrangian", default=0.01, type=float)
 
     args = parser.parse_args()
 
