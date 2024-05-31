@@ -54,6 +54,7 @@ class LeNet_MNIST(nn.Module):
         self.fc_1 = nn.Linear(16 * 4 * 4, 120)
         self.fc_2 = nn.Linear(120, 84)
         self.fc_3 = nn.Linear(84, output_dim)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
@@ -67,13 +68,11 @@ class LeNet_MNIST(nn.Module):
         return x, h
     
     def get_coverage(self, x, threshold):
-        num_activated = 0
-        num_neuron = 0
 
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        activated_1 = self.sigmoid(10*(x - threshold))
+        activated_1 = torch.flatten(self.sigmoid(10*(x - threshold)), start_dim=1)
         x = F.relu(F.max_pool2d(self.conv2(x), 2))
-        activated_2 = self.sigmoid(10*(x - threshold))
+        activated_2 = torch.flatten(self.sigmoid(10*(x - threshold)), start_dim=1)
         x = x.view(x.shape[0], -1)
         h = x
         x = F.relu(self.fc_1(x))
@@ -109,6 +108,7 @@ class LeNet_CIFAR10(nn.Module):
         self.fc_1 = nn.Linear(self._to_linear, 120)
         self.fc_2 = nn.Linear(120, 84)
         self.fc_3 = nn.Linear(84, output_dim)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.convs(x)
@@ -118,3 +118,29 @@ class LeNet_CIFAR10(nn.Module):
         x = F.relu(self.fc_2(x))
         x = self.fc_3(x)
         return x, h
+
+    def get_coverage(self, x, threshold):
+        x = self.conv1(x)
+        activated_1 = torch.flatten(self.sigmoid(10*(x - threshold)), start_dim=1)
+        x = F.relu(x)
+        x = F.max_pool2d(x, (2,2))
+
+        x = self.conv2(x)
+        activated_2 = torch.flatten(self.sigmoid(10*(x - threshold)), start_dim=1)
+        x = F.relu(x)
+        x = F.max_pool2d(x, (2,2))
+        x = x.view(x.shape[0], -1)
+
+
+        x = self.fc_1(x)
+        activated_3 = self.sigmoid(10*(x - threshold))
+        x = F.relu(x)
+        
+        x = self.fc_2(x)
+        activated_4 = self.sigmoid(10*(x - threshold))
+        x = F.relu(x)
+        x = self.fc_3(x)
+
+        activated = torch.cat([activated_1, activated_2, activated_3, activated_4], 1)
+        coverage = torch.mean(activated, 1)
+        return coverage
