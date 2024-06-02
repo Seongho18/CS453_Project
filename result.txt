@@ -1,0 +1,56 @@
+[Normal Data (10 epoch) - Threshold: 1]
+LENET_CIFAR10 (10 epoch): Accuracy 62.95%
+LENET_MNIST (10 epoch): Accuarcy 99.02%
+MLP_CIFAR10 (10 epoch): Accuracy 51.35%
+MLP_MNIST (10 epoch): Accuarcy 97.24%
+
+[Normal (5epoch) + Noise (5epoch) - Threshold: 1]
+LENET_CIFAR10
+	Coverage Before attack: 5.76%
+	Coverage After attack: 10.05%
+	Accuracy: 50.34%
+LENET_MNIST
+	Coverage Before attack: 27.69%
+	Coverage After attack: 28.80%
+	Accuracy: 98.94%
+MLP_CIFAR10
+	Coverage Before attack: 29.51%
+	Coverage After attack: 37.61%
+	Accuracy: 51.20%
+MLP_MNIST
+	Coverage Before attack: 21.79%
+	Coverage After attack: 23.97%
+	Accuracy: 97.28%
+
+[Normal (5epoch) + Noise (5epoch) - Threshold: 0.7]
+LENET_CIFAR10
+	lambda 0.1:
+		Accuracy: 97.04%
+		Coverage: 24.97%
+	lambda 0.05:
+		Accuracy: 97.28%
+		Coverage: 24.52%
+
+LENET_MNIST 
+	lambda 0.1:
+		Accuracy: 98.89%
+		Coverage: 28.51%
+	lambda 0.05:
+		Accuracy: 98.87%
+		Coverage: 28.72%
+MLP_CIFAR10 
+	lambda 0.1:
+		Accuracy: 52.61%
+		Coverage: 34.72%
+	lambda 0.05:
+		Accuracy: 52.03%
+		Coverage: 36.71%
+
+MLP_MNIST 
+	lambda 0.1:
+		Accuracy: 54.34%
+		Coverage: 13.78%
+	lambda 0.05:
+		Accuracy: 54.72%
+		Coverage: 14.13%
+
