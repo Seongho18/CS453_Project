@@ -101,7 +101,7 @@ def main(args):
                     cv2.imwrite(img_path, cv2.cvtColor((img + 1) * 127.5, cv2.COLOR_RGB2BGR))
                 
                 # Compute coverage (original images)
-                coverage_before = model.get_coverage(data, 1)
+                coverage_before = model.get_coverage(data, 0.7)
                 all_coverage_before.append(coverage_before)
                 
                 # Optimize noise iteratively
@@ -116,7 +116,7 @@ def main(args):
                     perturbed_data = torch.clamp(perturbed_data, -1, 1)
 
                     # compute coverage (perturbed images)
-                    coverage = model.get_coverage(perturbed_data, 1)
+                    coverage = model.get_coverage(perturbed_data, 0.7)
 
                     # our loss function
                     loss_noise = torch.norm(noise) * args.lagrangian - coverage.mean()
@@ -128,7 +128,7 @@ def main(args):
                 # store perturbed images in memory
                 perturbed_images_list.append((perturbed_data.clone(), label.clone()))
 
-                coverage_after = model.get_coverage(perturbed_data, 1)
+                coverage_after = model.get_coverage(perturbed_data, 0.7)
                 all_coverage_after.append(coverage_after)
 
                 optimizer.zero_grad()
